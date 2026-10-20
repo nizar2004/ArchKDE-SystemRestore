@@ -1,6 +1,6 @@
-# Nizar Restore — Arch / KDE Plasma
+# ArchKDE-SystemRestore
 
-A one-command restore script for my personal setup. Running it re-applies:
+A one-command restore script for Arch / KDE Plasma. Running it re-applies:
 
 1. **fastfetch** — my custom `config.jsonc` (Tokyo Night colours, OS age module)
 2. **Ghostty** — my custom terminal theme (background `#1c1c1c`, Tokyo Night palette)
