@@ -1,0 +1,181 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "logo": {
+    "source": "arch_small",
+    "padding": {
+      "right": 4,
+      "top": 1
+    }
+  },
+  "display": {
+    "separator": "",
+    "color": {
+      "keys": "blue",
+      "title": "white"
+    },
+    "key": {
+      "type": "both",
+      "width": 16
+    },
+    "bar": {
+      "width": 10,
+      "char": {
+        "elapsed": "\u2588",
+        "total": " "
+      },
+      "border": {
+        "left": "",
+        "right": ""
+      },
+      "color": {
+        "total": null
+      }
+    },
+    "percent": {
+      "type": [
+        "num",
+        "bar",
+        "bar-monochrome"
+      ],
+      "green": 50,
+      "yellow": 80,
+      "color": {
+        "green": "#a6d189",
+        "yellow": "#e5c07b",
+        "red": "#e78284"
+      }
+    }
+  },
+  "modules": [
+    {
+      "type": "title",
+      "format": "Welcome Nizar."
+    },
+    {
+      "type": "custom",
+      "key": " ",
+      "format": "────────────────────"
+    },
+    {
+      "type": "os",
+      "key": "OS",
+      "format": ": {name} {arch}",
+      "keyColor": "#7aa2f7"
+    },
+    {
+      "type": "kernel",
+      "key": "Kernel",
+      "format": ": {release}",
+      "keyColor": "#7aa2f7"
+    },
+    {
+      "type": "host",
+      "key": "Host",
+      "format": ": {name}",
+      "keyColor": "#7aa2f7"
+    },
+    {
+      "type": "cpu",
+      "key": "CPU",
+      "format": ": {name} ({cores-logical}) @ {freq-max}",
+      "keyColor": "#7aa2f7"
+    },
+    {
+      "type": "gpu",
+      "format": ": {name}",
+      "keyColor": "#7aa2f7"
+    },
+    "break",
+    {
+      "type": "cpuusage",
+      "key": "CPU",
+      "format": ": {avg-bar}  {avg}",
+      "keyColor": "#9ece6a",
+      "percent": {
+        "type": [
+          "num",
+          "bar",
+          "num-color",
+          "bar-monochrome"
+        ],
+        "green": 100,
+        "yellow": 100
+      }
+    },
+    {
+      "type": "memory",
+      "key": "RAM",
+      "format": ": {percentage-bar}  {percentage}  {used} / {total}",
+      "keyColor": "#9ece6a",
+      "percent": {
+        "type": [
+          "num",
+          "bar",
+          "num-color",
+          "bar-monochrome"
+        ],
+        "green": 0,
+        "yellow": 100
+      }
+    },
+    {
+      "type": "disk",
+      "key": "DSK",
+      "folders": "/",
+      "format": ": {size-percentage-bar}  {size-percentage}  {size-used} / {size-total}",
+      "keyColor": "#9ece6a",
+      "percent": {
+        "type": [
+          "num",
+          "bar",
+          "num-color",
+          "bar-monochrome"
+        ],
+        "green": 0,
+        "yellow": 0,
+        "color": {
+          "green": "#7aa2f7",
+          "yellow": "#7aa2f7",
+          "red": "#7aa2f7"
+        }
+      }
+    },
+    {
+      "type": "battery",
+      "key": "BAT",
+      "format": ": {capacity-bar}  {capacity}",
+      "keyColor": "#9ece6a",
+      "percent": {
+        "type": [
+          "num",
+          "bar",
+          "num-color",
+          "bar-monochrome"
+        ],
+        "green": 0,
+        "yellow": 0
+      }
+    },
+    "break",
+    {
+      "type": "packages",
+      "key": "Packages",
+      "keyColor": "#bb9af7",
+      "format": ": {pacman} (pacman)"
+    },
+    {
+      "type": "uptime",
+      "key": "Uptime",
+      "keyColor": "#bb9af7",
+      "format": ": {formatted}"
+    },
+    {
+      "type": "command",
+      "key": "OS Age",
+      "text": "b=$(cat \"$HOME/.local/state/nizar-restore/os-install-date\" 2>/dev/null || stat -c %W /); n=$(date +%s); d=$(( (n-b)/86400 )); if [ $d -eq 0 ]; then echo $(( (n-b)/3600 )) hours; else echo $d days; fi",
+      "keyColor": "#bb9af7",
+      "format": ": {result}"
+    },
+    "break"
+  ]
+}
