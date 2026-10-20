@@ -6,6 +6,7 @@
 #   install [--global]     Install this command onto your PATH
 #   backup  [--label TEXT] Back up current state (OS age, and anything added later)
 #   restore [--from DIR]   Restore configs (fastfetch, ghostty, fish, oh-my-posh) + OS age
+#   update                 Pull the latest version of the installed copy
 #   status                 Show current OS age, backups, and config status
 #   help                   Show this help
 #
@@ -293,6 +294,28 @@ cmd_status() {
 }
 
 # ---------------------------------------------------------------------------
+# update
+# ---------------------------------------------------------------------------
+cmd_update() {
+  # Follow symlinks to find the real install location.
+  local self="$0"
+  while [ -h "$self" ]; do
+    local d; d="$(cd -P "$(dirname "$self")" && pwd)"
+    self="$(readlink "$self")"
+    [ "${self#/*}" = "$self" ] && self="$d/$self"
+  done
+  local root; root="$(cd -P "$(dirname "$self")" && pwd)"
+
+  if [ -d "$root/.git" ]; then
+    info "Updating $root"
+    git -C "$root" pull --ff-only
+    ok "Updated to the latest version"
+  else
+    die "No git repo found at $root. Re-run the one-command installer to update."
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
 usage() { sed -n '2,12p' "$0"; }
@@ -301,6 +324,7 @@ case "${1:-help}" in
   install) shift; cmd_install "$@" ;;
   backup)  shift; cmd_backup  "$@" ;;
   restore) shift; cmd_restore "$@" ;;
+  update)  shift; cmd_update  "$@" ;;
   status)  shift; cmd_status  "$@" ;;
   help|-h|--help) usage ;;
   "") usage ;;

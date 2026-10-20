@@ -15,6 +15,18 @@ configs in sync and makes my fastfetch **"OS Age"** survive a full reinstall.
 
 ## Install
 
+Run this single command — **no git clone needed**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nizar2004/ArchKDE-SystemRestore/main/remote-install.sh | bash
+```
+
+It downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
+`archkde-restore` command keeps working), installs the command onto your `PATH`, and runs
+an initial restore.
+
+Prefer to clone manually? That works too:
+
 ```bash
 git clone https://github.com/nizar2004/ArchKDE-SystemRestore.git
 cd ArchKDE-SystemRestore
@@ -27,7 +39,7 @@ cd ArchKDE-SystemRestore
    (`~/.local/bin` by default, or `/usr/local/bin` with `--global`)
 2. Runs an initial **restore**
 
-After that, just use the command directly.
+After that, just use the command directly. To update later: `archkde-restore update`.
 
 ## Usage
 
@@ -36,6 +48,7 @@ archkde-restore backup            # back up current state (OS age + anything els
 archkde-restore backup --label "before tweak"
 archkde-restore restore           # restore all configs + OS age
 archkde-restore restore --from ~/.local/state/ArchKDE-SystemRestore/backups/20261021-010444
+archkde-restore update            # pull the latest version of the installed copy
 archkde-restore status            # show OS age, backups, and config status
 ```
 
