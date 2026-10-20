@@ -1,0 +1,97 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "palette": {
+    "bg": "#0f111a",
+    "fg": "#c0caf5",
+    "blue": "#7aa2f7",
+    "green": "#9ece6a",
+    "purple": "#bb9af7",
+    "red": "#f7768e",
+    "yellow": "#e0af68",
+    "cyan": "#7dcfff",
+    "gray": "#565f89",
+    "dark": "#1a1b26"
+  },
+  "blocks": [
+    {
+      "alignment": "left",
+      "segments": [
+        {
+          "foreground": "p:blue",
+          "style": "plain",
+          "template": "{{.Icon}} ",
+          "type": "os"
+        },
+        {
+          "foreground": "p:blue",
+          "style": "plain",
+          "template": "{{ .UserName }}@{{ .HostName }} ",
+          "type": "session"
+        },
+        {
+          "foreground": "p:cyan",
+          "options": {
+            "folder_icon": "…",
+            "home_icon": "~",
+            "style": "agnoster_short"
+          },
+          "style": "plain",
+          "template": "{{ .Path }} ",
+          "type": "path"
+        },
+        {
+          "foreground": "p:green",
+          "options": {
+            "branch_icon": " ",
+            "cherry_pick_icon": " ",
+            "commit_icon": " ",
+            "merge_icon": " ",
+            "no_commits_icon": " ",
+            "rebase_icon": " ",
+            "revert_icon": " ",
+            "tag_icon": " "
+          },
+          "style": "plain",
+          "template": "{{ .HEAD }}{{ if .Staging.Changed }} ●{{ .Staging.String }}{{ end }}{{ if .Working.Changed }} ✚{{ .Working.String }}{{ end }} ",
+          "type": "git"
+        },
+        {
+          "foreground": "p:purple",
+          "style": "plain",
+          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }} {{ end }}{{ .Full }}{{ end }} ",
+          "type": "python"
+        },
+        {
+          "foreground": "p:red",
+          "style": "plain",
+          "template": "{{ if gt .Code 0 }}✖{{ reason .Code }} {{ end }}",
+          "type": "status"
+        },
+        {
+          "foreground": "p:yellow",
+          "style": "plain",
+          "template": "❯",
+          "type": "text"
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "alignment": "right",
+      "segments": [
+        {
+          "foreground": "p:gray",
+          "style": "plain",
+          "template": "{{ .CurrentDate | date .Format }}",
+          "options": {
+            "time_format": "15:04:05"
+          },
+          "type": "time"
+        }
+      ],
+      "type": "prompt"
+    }
+  ],
+  "final_space": true,
+  "version": 4
+}

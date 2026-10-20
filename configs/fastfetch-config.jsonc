@@ -172,7 +172,7 @@
     {
       "type": "command",
       "key": "OS Age",
-      "text": "b=$(cat \"$HOME/.local/state/nizar-restore/os-install-date\" 2>/dev/null || stat -c %W /); n=$(date +%s); d=$(( (n-b)/86400 )); if [ $d -eq 0 ]; then echo $(( (n-b)/3600 )) hours; else echo $d days; fi",
+      "text": "b=$(cat \"$HOME/.local/state/ArchKDE-SystemRestore/os-install-date\" 2>/dev/null || stat -c %W /); n=$(date +%s); d=$(( (n-b)/86400 )); if [ $d -eq 0 ]; then echo $(( (n-b)/3600 )) hours; else echo $d days; fi",
       "keyColor": "#bb9af7",
       "format": ": {result}"
     },

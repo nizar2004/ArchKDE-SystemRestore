@@ -1,0 +1,8 @@
+# Runtime artifacts
+*.bak
+backups/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+*~

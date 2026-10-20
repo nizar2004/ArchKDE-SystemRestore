@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# Backup item: OS install date
+#
+# Contract (provided by archkde-restore `backup`):
+#   $1                    = backup destination directory
+#   $AKSR_DATE_STATE      = current state install-date file
+#   $AKSR_REPO_DIR        = repo root (holds the canonical os-install-date)
+#
+# Outputs a short description on success (printed by the caller).
+#
+set -euo pipefail
+
+dest="${1:?backup destination required}"
+mkdir -p "$dest"
+
+state="${AKSR_DATE_STATE:-$HOME/.local/state/ArchKDE-SystemRestore/os-install-date}"
+repo_date="${AKSR_REPO_DIR:-}/os-install-date"
+
+if [ -s "$state" ]; then
+  cp -f "$state" "$dest/os-install-date"
+elif [ -s "$repo_date" ]; then
+  cp -f "$repo_date" "$dest/os-install-date"
+else
+  stat -c %W / 2>/dev/null > "$dest/os-install-date" || stat -f %B / 2>/dev/null > "$dest/os-install-date"
+fi
+
+now="$(date +%s)"
+days=$(( (now - "$(cat "$dest/os-install-date")") / 86400 ))
+[ "$days" -eq 0 ] && echo "os-install-date ($(( (now - "$(cat "$dest/os-install-date")") / 3600 )) hours)" \
+                   || echo "os-install-date ($days days)"

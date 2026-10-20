@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "palette": {
+    "blue": "#7aa2f7",
+    "cyan": "#7dcfff",
+    "green": "#9ece6a",
+    "purple": "#bb9af7",
+    "red": "#f7768e",
+    "yellow": "#e0af68",
+    "gray": "#565f89"
+  },
+  "blocks": [
+    {
+      "alignment": "left",
+      "segments": [
+        {
+          "foreground": "p:blue",
+          "style": "plain",
+          "template": "{{.Icon}} ",
+          "type": "os"
+        },
+        {
+          "foreground": "p:gray",
+          "style": "plain",
+          "template": "{{ .UserName }}@{{ .HostName }} ",
+          "type": "session"
+        },
+        {
+          "foreground": "p:cyan",
+          "options": {
+            "folder_icon": "…",
+            "home_icon": "~",
+            "style": "agnoster_short"
+          },
+          "style": "plain",
+          "template": "{{ .Path }} ",
+          "type": "path"
+        },
+        {
+          "foreground": "p:green",
+          "options": {
+            "branch_icon": " "
+          },
+          "style": "plain",
+          "template": "{{ .HEAD }}{{ if .Staging.Changed }} ●{{ end }}{{ if .Working.Changed }} ✚{{ end }}{{ if gt .StashCount 0 }} ≡{{ .StashCount }}{{ end }} ",
+          "type": "git"
+        },
+        {
+          "foreground": "p:purple",
+          "style": "plain",
+          "template": "{{ if .Venv }} {{ .Venv }} {{ end }}",
+          "type": "python"
+        },
+        {
+          "foreground": "p:red",
+          "style": "plain",
+          "template": "{{ if gt .Code 0 }}✖ {{ reason .Code }} {{ end }}",
+          "type": "status"
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "foreground": "p:yellow",
+          "style": "plain",
+          "template": "❯",
+          "type": "text"
+        }
+      ],
+      "type": "prompt"
+    }
+  ],
+  "final_space": true,
+  "version": 4
+}

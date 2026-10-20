@@ -1,50 +1,82 @@
 # ArchKDE-SystemRestore
 
-A one-command restore script for Arch / KDE Plasma. Running it re-applies:
+A one-command backup & restore tool for my **Arch / KDE Plasma** setup. It keeps my
+configs in sync and makes my fastfetch **"OS Age"** survive a full reinstall.
 
-1. **fastfetch** — my custom `config.jsonc` (Tokyo Night colours, OS age module)
-2. **Ghostty** — my custom terminal theme (background `#1c1c1c`, Tokyo Night palette)
-3. **OS install date** — persisted so the fastfetch **"OS Age"** module keeps counting from the
-   original install day, even after a full reinstall.
+## What it manages
+
+| Item | Source | Restored to |
+|------|--------|-------------|
+| fastfetch | `configs/fastfetch-config.jsonc` | `~/.config/fastfetch/config.jsonc` |
+| Ghostty | `configs/ghostty-config` | `~/.config/ghostty/config` |
+| fish | `configs/fish-config.fish` | `~/.config/fish/config.fish` |
+| oh-my-posh | `configs/oh-my-posh/*.omp.json` | `~/.config/oh-my-posh/` |
+| OS age | `os-install-date` | `~/.local/state/ArchKDE-SystemRestore/os-install-date` |
 
 ## Install
 
 ```bash
-git clone https://github.com/<your-user>/nizar-restore.git
-cd nizar-restore
+git clone https://github.com/nizar2004/ArchKDE-SystemRestore.git
+cd ArchKDE-SystemRestore
 ./install.sh
 ```
 
-That's it. It installs `fastfetch` + `ghostty` if they're missing, backs up any existing
-configs as `*.bak`, and writes your configs in place.
+`install.sh` does two things:
 
-## How the OS Age survives reinstall
+1. Installs the **`archkde-restore`** command onto your `PATH`
+   (`~/.local/bin` by default, or `/usr/local/bin` with `--global`)
+2. Runs an initial **restore**
 
-`install.sh` stores the install date as a unix timestamp in:
+After that, just use the command directly.
 
-```
-~/.local/state/nizar-restore/os-install-date
-```
-
-and keeps a copy in the repo root at `os-install-date`. The fastfetch config reads the age
-from that file, falling back to the root filesystem birth time if the file is missing.
-
-So the flow is:
-
-1. **First run** — records the current root birth time into the state file *and* the repo.
-2. **Reinstall + fresh clone** — the repo's committed `os-install-date` is copied back into
-   the state file, so fastfetch keeps showing your *original* install age.
-
-## Uninstall / revert
+## Usage
 
 ```bash
-rm -f ~/.config/fastfetch/config.jsonc.bak ~/.config/ghostty/config.bak   # remove backups
-# restore backups if you want the pre-script state:
-cp ~/.config/fastfetch/config.jsonc.bak ~/.config/fastfetch/config.jsonc
-cp ~/.config/ghostty/config.bak ~/.config/ghostty/config
+archkde-restore backup            # back up current state (OS age + anything else)
+archkde-restore backup --label "before tweak"
+archkde-restore restore           # restore all configs + OS age
+archkde-restore restore --from ~/.local/state/ArchKDE-SystemRestore/backups/20261021-010444
+archkde-restore status            # show OS age, backups, and config status
 ```
+
+## How the OS age survives a reinstall
+
+The install date is stored as a unix timestamp in
+`~/.local/state/ArchKDE-SystemRestore/os-install-date`, with a canonical copy in the
+repo at `os-install-date`. The fastfetch config reads the age from that file (falling
+back to the root filesystem birth time if missing).
+
+1. **First run** — records the current install date into the state file *and* the repo.
+2. **Reinstall + fresh clone** — the repo's committed `os-install-date` is copied back,
+   so fastfetch keeps showing your *original* install age.
+
+## Adding more backups in the future
+
+Backups are extensible. Drop an executable script into `lib/backup/` and it runs
+automatically on every `archkde-restore backup`:
+
+```
+lib/backup/
+└── 10-os-age          # already backs up the OS install date
+```
+
+Each script receives the backup destination as `$1` and can use these env vars:
+
+| Variable | Meaning |
+|----------|---------|
+| `$1` | backup destination directory |
+| `$AKSR_BACKUP_DIR` | same as `$1` |
+| `$AKSR_DATE_STATE` | current install-date state file |
+| `$AKSR_REPO_DIR` | repo root |
+| `$AKSR_STATE_DIR` | `~/.local/state/ArchKDE-SystemRestore` |
+
+Prefix the filename with a number to control ordering (`10-`, `20-`, …). Print a short
+description on success — the caller shows it in the backup summary.
+
+Backups are stored in `~/.local/state/ArchKDE-SystemRestore/backups/<timestamp>/` with a
+`manifest.txt`.
 
 ## Requirements
 
-- Arch Linux / CachyOS (pacman) — Debian/Ubuntu (`apt`) also supported for the deps install.
-- `sudo` or `pkexec` for package installation (use `./install.sh --no-deps` to skip it).
+- Arch Linux / CachyOS (pacman); Debian/Ubuntu (`apt`) also handled for deps.
+- `sudo` or `pkexec` for package installation / global command install.
