@@ -39,16 +39,20 @@ archkde-restore restore --from ~/.local/state/ArchKDE-SystemRestore/backups/2026
 archkde-restore status            # show OS age, backups, and config status
 ```
 
-## How the OS age survives a reinstall
+## How the OS age works
 
 The install date is stored as a unix timestamp in
-`~/.local/state/ArchKDE-SystemRestore/os-install-date`, with a canonical copy in the
-repo at `os-install-date`. The fastfetch config reads the age from that file (falling
-back to the root filesystem birth time if missing).
+`~/.local/state/ArchKDE-SystemRestore/os-install-date`, with a copy in the repo at
+`os-install-date`. The fastfetch config reads the age from that file (falling back to
+the root filesystem birth time if missing).
 
-1. **First run** — records the current install date into the state file *and* the repo.
-2. **Reinstall + fresh clone** — the repo's committed `os-install-date` is copied back,
-   so fastfetch keeps showing your *original* install age.
+- **First run** — records the current install date into the state file *and* the repo.
+- **`backup`** — refreshes the stored age to the **current** OS age at that moment
+  (reads the running system's install date and overwrites the state + repo copies), so
+  fastfetch immediately shows the age as it is right now.
+- **`restore`** — copies the repo's `os-install-date` back into the state file.
+
+In short: `backup` always makes the OS age reflect **now**.
 
 ## Adding more backups in the future
 

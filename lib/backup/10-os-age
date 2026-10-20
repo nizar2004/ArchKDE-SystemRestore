@@ -2,10 +2,14 @@
 #
 # Backup item: OS install date
 #
+# Records the CURRENT system install date into this backup, and refreshes the
+# stored age so fastfetch immediately shows the OS age as it is right now.
+#
 # Contract (provided by archkde-restore `backup`):
-#   $1                    = backup destination directory
-#   $AKSR_DATE_STATE      = current state install-date file
-#   $AKSR_REPO_DIR        = repo root (holds the canonical os-install-date)
+#   $1                 = backup destination directory
+#   $AKSR_DATE_STATE   = current state install-date file
+#   $AKSR_REPO_DIR     = repo root (holds the canonical os-install-date)
+#   $AKSR_STATE_DIR    = ~/.local/state/ArchKDE-SystemRestore
 #
 # Outputs a short description on success (printed by the caller).
 #
@@ -17,15 +21,31 @@ mkdir -p "$dest"
 state="${AKSR_DATE_STATE:-$HOME/.local/state/ArchKDE-SystemRestore/os-install-date}"
 repo_date="${AKSR_REPO_DIR:-}/os-install-date"
 
-if [ -s "$state" ]; then
-  cp -f "$state" "$dest/os-install-date"
-elif [ -s "$repo_date" ]; then
-  cp -f "$repo_date" "$dest/os-install-date"
-else
-  stat -c %W / 2>/dev/null > "$dest/os-install-date" || stat -f %B / 2>/dev/null > "$dest/os-install-date"
+# 1. Current OS install date, straight from the running system.
+current="$(stat -c %W / 2>/dev/null || stat -f %B / 2>/dev/null || true)"
+
+# If the filesystem birth time is unknown (0), keep whatever we already have.
+if [ -z "$current" ] || [ "$current" = "0" ]; then
+  if [ -s "$state" ]; then current="$(cat "$state")"; fi
+fi
+[ -n "$current" ] || { echo "could not determine OS install date" >&2; exit 1; }
+
+# 2. Save it into this backup.
+printf '%s\n' "$current" > "$dest/os-install-date"
+
+# 3. Refresh the stored age so fastfetch shows the current age right away.
+mkdir -p "$(dirname "$state")"
+printf '%s\n' "$current" > "$state"
+
+# 4. Keep the repo copy in sync so a fresh clone restores the latest age.
+if [ -n "$repo_date" ] && [ -d "$(dirname "$repo_date")" ]; then
+  printf '%s\n' "$current" > "$repo_date"
 fi
 
 now="$(date +%s)"
-days=$(( (now - "$(cat "$dest/os-install-date")") / 86400 ))
-[ "$days" -eq 0 ] && echo "os-install-date ($(( (now - "$(cat "$dest/os-install-date")") / 3600 )) hours)" \
-                   || echo "os-install-date ($days days)"
+days=$(( (now - current) / 86400 ))
+if [ "$days" -eq 0 ]; then
+  echo "OS age refreshed to now ($(( (now - current) / 3600 )) hours)"
+else
+  echo "OS age refreshed to now ($days days)"
+fi
