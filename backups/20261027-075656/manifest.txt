@@ -1,0 +1,5 @@
+created: 2026-10-27 07:56:56
+label: e2e from installed command
+os-age: 12 days
+items:
+  - os-install-date
