@@ -5,6 +5,11 @@ if status is-interactive
         fastfetch
     end
     if type -q oh-my-posh
-        oh-my-posh init fish --config ~/.config/oh-my-posh/nizar-simple.omp.json | source
+        set -l omp_theme "$HOME/.config/oh-my-posh/nizar-simple.omp.json"
+        if test -f "$omp_theme"
+            oh-my-posh init fish --config "$omp_theme" | source
+        else
+            oh-my-posh init fish | source
+        end
     end
 end

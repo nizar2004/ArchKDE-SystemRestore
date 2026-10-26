@@ -44,13 +44,24 @@ After that, just use the command directly. To update later: `archkde-restore upd
 ## Usage
 
 ```bash
-archkde-restore backup            # back up current state (OS age + anything else)
+archkde-restore backup              # back up + push to GitHub
 archkde-restore backup --label "before tweak"
-archkde-restore restore           # restore all configs + OS age
+archkde-restore backup --no-push    # back up locally only
+archkde-restore restore             # restore all configs + OS age
+archkde-restore restore --from latest
 archkde-restore restore --from ~/.local/state/ArchKDE-SystemRestore/backups/20261021-010444
-archkde-restore update            # pull the latest version of the installed copy
-archkde-restore status            # show OS age, backups, and config status
+archkde-restore update              # pull the latest version of the installed copy
+archkde-restore status              # show OS age, backups, and config status
 ```
+
+## Backups go to GitHub
+
+Every `backup` is stored in the repo at `backups/<timestamp>/`, committed, and pushed.
+So after a fresh reinstall, a fresh clone already contains every backup and you can
+restore with `archkde-restore restore --from latest`.
+
+Backups are created in the copy of the repo you run the command from. Use
+`archkde-restore update` to pull the installed copy up to date.
 
 ## How the OS age works
 

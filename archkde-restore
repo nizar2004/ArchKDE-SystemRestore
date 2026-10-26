@@ -4,8 +4,9 @@
 #
 # Subcommands:
 #   install [--global]     Install this command onto your PATH
-#   backup  [--label TEXT] Back up current state (OS age, and anything added later)
+#   backup  [--label TEXT] Back up current state and push it to GitHub
 #   restore [--from DIR]   Restore configs (fastfetch, ghostty, fish, oh-my-posh) + OS age
+#                          Use --from latest to restore from the newest backup
 #   update                 Pull the latest version of the installed copy
 #   status                 Show current OS age, backups, and config status
 #   help                   Show this help
@@ -38,8 +39,10 @@ DATE_SRC="$REPO_DIR/os-install-date"
 
 # Runtime locations (user state, not the repo)
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/$NAME"
-BACKUP_DIR="$STATE_DIR/backups"
 DATE_STATE="$STATE_DIR/os-install-date"
+
+# Backups live inside the repo so they can be pushed to GitHub.
+BACKUP_DIR="$REPO_DIR/backups"
 
 # Target config locations
 FASTFETCH_CFG="$HOME/.config/fastfetch/config.jsonc"
@@ -135,10 +138,11 @@ cmd_install() {
 # backup
 # ---------------------------------------------------------------------------
 cmd_backup() {
-  local label=""
+  local label="" no_push=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --label|-l) label="${2:-}"; shift ;;
+      --no-push)  no_push=true ;;
       -h|--help)  sed -n '2,12p' "$0"; return 0 ;;
       *) die "Unknown option: $1 (try --help)" ;;
     esac
@@ -183,6 +187,75 @@ cmd_backup() {
   } > "$dest/manifest.txt"
 
   ok "Backup complete ($items item(s)). Saved to $dest"
+
+  if $no_push; then
+    warn "Skipping GitHub push (--no-push)"
+  else
+    backup_push "$label"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# git helpers (backup push)
+# ---------------------------------------------------------------------------
+# Make sure the repo has a commit identity, falling back to the GitHub login.
+ensure_git_identity() {
+  local dir="${1:?repo dir required}"
+
+  if [ -n "$(git -C "$dir" config user.name 2>/dev/null)" ] && \
+     [ -n "$(git -C "$dir" config user.email 2>/dev/null)" ]; then
+    return 0
+  fi
+
+  command -v gh >/dev/null 2>&1 || { warn "No git identity configured"; return 1; }
+
+  local login name email
+  login="$(gh api user --jq .login 2>/dev/null || true)"
+  [ -n "$login" ] || { warn "Could not read GitHub identity"; return 1; }
+
+  name="$(gh api user --jq .name 2>/dev/null || true)"
+  [ -n "$name" ] || name="$login"
+  email="$(gh api user --jq .email 2>/dev/null || true)"
+  if [ -z "$email" ] || [ "$email" = "null" ]; then
+    email="$login@users.noreply.github.com"
+  fi
+
+  git -C "$dir" config user.name "$name"
+  git -C "$dir" config user.email "$email"
+  ok "Git identity set: $name <$email>"
+}
+
+# Commit the new backup and push it so it can be restored from GitHub.
+backup_push() {
+  local label="${1:-}"
+
+  info "Pushing backup to GitHub"
+  ensure_git_identity "$REPO_DIR"
+
+  if ! git -C "$REPO_DIR" add -A backups os-install-date 2>/dev/null; then
+    warn "Could not stage backup files"
+    return 1
+  fi
+
+  # Nothing new? Quietly skip.
+  if git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
+    ok "Nothing new to push"
+    return 0
+  fi
+
+  local msg="backup: $(date +%Y%m%d-%H%M%S)"
+  [ -n "$label" ] && msg="$msg ($label)"
+
+  if git -C "$REPO_DIR" commit -m "$msg" >/dev/null 2>&1; then
+    if git -C "$REPO_DIR" push origin HEAD >/dev/null 2>&1; then
+      ok "Pushed to GitHub — restorable on any machine"
+    else
+      warn "Push failed (offline or auth?). Backup is saved locally."
+      echo "        Push it later with: git -C $REPO_DIR push"
+    fi
+  else
+    warn "Commit failed — is the repo in a clean state?"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -198,6 +271,13 @@ cmd_restore() {
     esac
     shift
   done
+
+  # --from latest: use the newest backup stored in the repo.
+  if [ "$from" = "latest" ]; then
+    from="$(ls -1d "$BACKUP_DIR"/* 2>/dev/null | sort | tail -n 1 || true)"
+    [ -n "$from" ] || die "No backups found in $BACKUP_DIR"
+    info "Using latest backup: $(basename "$from")"
+  fi
 
   info "Restoring $NAME"
 
@@ -283,11 +363,13 @@ cmd_status() {
   if [ -d "$BACKUP_DIR" ] && ls -1 "$BACKUP_DIR" >/dev/null 2>&1; then
     for b in "$BACKUP_DIR"/*/; do
       [ -d "$b" ] || continue
-      local name age
+      local name age lbl
       name="$(basename "$b")"
       if [ -s "$b/os-install-date" ]; then age="$(age_from "$(cat "$b/os-install-date")")"; else age="?"; fi
-      printf '  - %s  (OS age: %s)\n' "$name" "$age"
+      lbl="$(sed -n 's/^label: *//p' "$b/manifest.txt" 2>/dev/null)"
+      printf '  - %s  (OS age: %s)%s\n' "$name" "$age" "${lbl:+  — $lbl}"
     done
+    echo "  (pushed to GitHub automatically on each backup)"
   else
     echo "  (none)"
   fi
