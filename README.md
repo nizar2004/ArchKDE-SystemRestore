@@ -21,9 +21,14 @@ Run this single command — **no git clone needed**:
 curl -fsSL https://raw.githubusercontent.com/nizar2004/ArchKDE-SystemRestore/main/remote-install.sh | bash
 ```
 
-It downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
-`archkde-restore` command keeps working), installs the command onto your `PATH`, and runs
-an initial restore.
+Designed for a **fresh Arch reinstall**. It:
+
+1. Installs every required package — `fastfetch`, `ghostty`, `fish`, `git`, `curl`
+   (and `oh-my-posh` from its official release binary, since it's not in the repos)
+2. Sets **fish** as the default shell, so fastfetch + oh-my-posh run on terminal open
+3. Downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
+   `archkde-restore` command keeps working), installs the command onto your `PATH`
+4. Runs an initial restore
 
 Prefer to clone manually? That works too:
 
@@ -32,12 +37,6 @@ git clone https://github.com/nizar2004/ArchKDE-SystemRestore.git
 cd ArchKDE-SystemRestore
 ./install.sh
 ```
-
-`install.sh` does two things:
-
-1. Installs the **`archkde-restore`** command onto your `PATH`
-   (`~/.local/bin` by default, or `/usr/local/bin` with `--global`)
-2. Runs an initial **restore**
 
 After that, just use the command directly. To update later: `archkde-restore update`.
 
@@ -106,5 +105,8 @@ Backups are stored in `~/.local/state/ArchKDE-SystemRestore/backups/<timestamp>/
 
 ## Requirements
 
-- Arch Linux / CachyOS (pacman); Debian/Ubuntu (`apt`) also handled for deps.
-- `sudo` or `pkexec` for package installation / global command install.
+- Arch Linux / CachyOS
+- `sudo` or `pkexec` for package installation / global command install
+
+The installer handles the rest — including `oh-my-posh`, which it pulls from the
+official GitHub release since it's not in the official repos.

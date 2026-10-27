@@ -2,8 +2,10 @@
 #
 # ArchKDE-SystemRestore — first-time bootstrap
 #
-# 1. Installs the `archkde-restore` command onto your PATH
-# 2. Runs an initial restore of your configs + OS age
+# 1. Installs every package needed (fastfetch, ghostty, fish, oh-my-posh, git, curl)
+# 2. Sets fish as the default shell
+# 3. Installs the `archkde-restore` command onto your PATH
+# 4. Runs an initial restore of your configs + OS age
 #
 # After this, just use the command directly:
 #   archkde-restore backup
@@ -19,6 +21,10 @@ CLI="$REPO_DIR/archkde-restore"
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
+info "Installing all required packages"
+"$CLI" deps
+
+echo
 info "Installing the archkde-restore command"
 "$CLI" install "$@"
 

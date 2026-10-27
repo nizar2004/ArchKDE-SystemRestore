@@ -4,6 +4,7 @@
 #
 # Subcommands:
 #   install [--global]     Install this command onto your PATH
+#   deps                   Install every package needed (for a fresh Arch install)
 #   backup  [--label TEXT] Back up current state and push it to GitHub
 #   restore [--from DIR]   Restore configs (fastfetch, ghostty, fish, oh-my-posh) + OS age
 #                          Use --from latest to restore from the newest backup
@@ -43,6 +44,10 @@ DATE_STATE="$STATE_DIR/os-install-date"
 
 # Backups live inside the repo so they can be pushed to GitHub.
 BACKUP_DIR="$REPO_DIR/backups"
+
+# Everything needed on a fresh Arch install for this project to work.
+PACMAN_PKGS=(fastfetch ghostty fish git curl)
+OMP_BIN_URL="https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64"
 
 # Target config locations
 FASTFETCH_CFG="$HOME/.config/fastfetch/config.jsonc"
@@ -86,6 +91,51 @@ resolve_install_date() {
   else
     mkdir -p "$STATE_DIR"
     stat -c %W / 2>/dev/null || stat -f %B / 2>/dev/null
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# deps — install everything needed on a fresh Arch install
+# ---------------------------------------------------------------------------
+cmd_deps() {
+  info "Installing required packages"
+
+  # --- pacman packages (fastfetch, ghostty, fish, git, curl) ---
+  local missing=() p
+  for p in "${PACMAN_PKGS[@]}"; do
+    pacman -Qq "$p" >/dev/null 2>&1 || missing+=("$p")
+  done
+
+  if [ ${#missing[@]} -gt 0 ]; then
+    info "Installing from pacman: ${missing[*]}"
+    as_root pacman -Sy --needed --noconfirm "${missing[@]}"
+    ok "pacman packages installed"
+  else
+    ok "All pacman packages already installed"
+  fi
+
+  # --- oh-my-posh (not in the official repos — install the official binary) ---
+  if command -v oh-my-posh >/dev/null 2>&1; then
+    ok "oh-my-posh already installed ($(oh-my-posh --version 2>/dev/null | head -1))"
+  else
+    info "Installing oh-my-posh from GitHub releases"
+    as_root mkdir -p /usr/local/bin
+    as_root curl -fsSL "$OMP_BIN_URL" -o /usr/local/bin/oh-my-posh
+    as_root chmod +x /usr/local/bin/oh-my-posh
+    ok "oh-my-posh installed: $(oh-my-posh --version 2>/dev/null | head -1)"
+  fi
+
+  # --- make fish the default shell so fastfetch + oh-my-posh run on terminal open ---
+  local cur_shell
+  cur_shell="$(getent passwd "$(id -un)" | cut -d: -f7 || true)"
+  if [ "$cur_shell" = "/usr/bin/fish" ]; then
+    ok "fish is already the default shell"
+  elif [ -x /usr/bin/fish ]; then
+    info "Setting fish as the default shell"
+    as_root chsh -s /usr/bin/fish "$(id -un)"
+    ok "Default shell is now fish (fastfetch + oh-my-posh will run on terminal open)"
+  else
+    warn "/usr/bin/fish not found — install fish first"
   fi
 }
 
@@ -404,6 +454,7 @@ usage() { sed -n '2,12p' "$0"; }
 
 case "${1:-help}" in
   install) shift; cmd_install "$@" ;;
+  deps)    shift; cmd_deps    "$@" ;;
   backup)  shift; cmd_backup  "$@" ;;
   restore) shift; cmd_restore "$@" ;;
   update)  shift; cmd_update  "$@" ;;
