@@ -46,8 +46,10 @@ DATE_STATE="$STATE_DIR/os-install-date"
 BACKUP_DIR="$REPO_DIR/backups"
 
 # Everything needed on a fresh Arch install for this project to work.
-PACMAN_PKGS=(fastfetch ghostty fish git curl)
+# (ttf-meslo-nerd provides MesloLGS Nerd Font Mono, used by the Ghostty config.)
+PACMAN_PKGS=(fastfetch ghostty fish git curl ttf-meslo-nerd)
 OMP_BIN_URL="https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64"
+GITHUB_REPO="https://github.com/nizar2004/ArchKDE-SystemRestore.git"
 
 # Target config locations
 FASTFETCH_CFG="$HOME/.config/fastfetch/config.jsonc"
@@ -80,7 +82,9 @@ age_from() {
   if [ "$days" -eq 0 ]; then echo "$(( (now - ts) / 3600 )) hours"; else echo "$days days"; fi
 }
 
-# Determine the canonical install date (state file -> repo -> now).
+# Determine the canonical install date (state file -> repo -> root fs birth time).
+# Always keeps $DATE_STATE in sync with whatever value is chosen, so callers can
+# read it back. Prints the timestamp (empty if the system can't provide one).
 resolve_install_date() {
   if [ -s "$DATE_STATE" ]; then
     cat "$DATE_STATE"
@@ -90,8 +94,36 @@ resolve_install_date() {
     cat "$DATE_STATE"
   else
     mkdir -p "$STATE_DIR"
-    stat -c %W / 2>/dev/null || stat -f %B / 2>/dev/null
+    local btime
+    btime="$(stat -c %W / 2>/dev/null || stat -f %B / 2>/dev/null || echo 0)"
+    # A birth time of 0 (common in VMs) is meaningless — refuse it rather than
+    # storing a bogus 20,000-day age.
+    if [ -n "$btime" ] && [ "$btime" != "0" ]; then
+      printf '%s\n' "$btime" > "$DATE_STATE"
+      echo "$btime"
+    fi
   fi
+}
+
+# Make this copy of the repo a real git clone (needed for `backup` pushes and
+# `update`). Handled as a no-op when it already is one.
+ensure_git_repo() {
+  command -v git >/dev/null 2>&1 || return 1
+  [ -d "$REPO_DIR" ] || return 1
+  [ -d "$REPO_DIR/.git" ] && return 0
+
+  if git -C "$REPO_DIR" init -q -b main \
+     && git -C "$REPO_DIR" remote add origin "$GITHUB_REPO" \
+     && git -C "$REPO_DIR" fetch -q origin main \
+     && git -C "$REPO_DIR" reset -q --hard origin/main \
+     && git -C "$REPO_DIR" branch -q --set-upstream-to=origin/main main
+  then
+    return 0
+  fi
+  # A half-initialized repo is worse than none: remove it so a later
+  # `deps` run can retry the conversion cleanly.
+  rm -rf "$REPO_DIR/.git"
+  return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -123,6 +155,17 @@ cmd_deps() {
     as_root curl -fsSL "$OMP_BIN_URL" -o /usr/local/bin/oh-my-posh
     as_root chmod +x /usr/local/bin/oh-my-posh
     ok "oh-my-posh installed: $(oh-my-posh --version 2>/dev/null | head -1)"
+  fi
+
+  # --- turn a tarball install into a real git clone so backup pushes work ---
+  if [ ! -d "$REPO_DIR/.git" ]; then
+    info "Converting this copy into a git clone ($GITHUB_REPO)"
+    if ensure_git_repo; then
+      ok "Install upgraded to a git clone — backups can now be pushed"
+    else
+      warn "Could not convert to a git clone (missing git or offline)"
+      warn "Backups will still save locally. Re-run 'archkde-restore deps' once online."
+    fi
   fi
 
   # --- make fish the default shell so fastfetch + oh-my-posh run on terminal open ---
@@ -223,9 +266,15 @@ cmd_backup() {
 
   # A backup always records the OS age, even if no items ran.
   if [ ! -s "$dest/os-install-date" ]; then
-    resolve_install_date > "$dest/os-install-date"
-    ok "os-install-date: recorded"
-    items=$((items+1))
+    local fallback_date
+    fallback_date="$(resolve_install_date)"
+    if [ -n "$fallback_date" ] && [ "$fallback_date" != "0" ]; then
+      printf '%s\n' "$fallback_date" > "$dest/os-install-date"
+      ok "os-install-date: recorded"
+      items=$((items+1))
+    else
+      warn "os-install-date: system birth time unknown and no stored date — skipping"
+    fi
   fi
 
   {
@@ -280,7 +329,9 @@ backup_push() {
   local label="${1:-}"
 
   info "Pushing backup to GitHub"
-  ensure_git_identity "$REPO_DIR"
+  if ! ensure_git_identity "$REPO_DIR"; then
+    warn "Proceeding without a configured git identity — the commit below may fail"
+  fi
 
   if ! git -C "$REPO_DIR" add -A backups os-install-date 2>/dev/null; then
     warn "Could not stage backup files"
@@ -379,12 +430,20 @@ cmd_restore() {
       die "No os-install-date in backup: $from"
     fi
   else
-    resolve_install_date > /dev/null
-    if [ -s "$DATE_STATE" ]; then ok "OS install date persisted"; fi
+    resolve_install_date
+    if [ -s "$DATE_STATE" ]; then
+      ok "OS install date persisted"
+    else
+      warn "OS install date unknown — run 'archkde-restore backup' once on the machine that has it"
+    fi
   fi
 
   echo
-  ok "Done! OS Age is now $(age_from "$(cat "$DATE_STATE")"). Run 'fastfetch' to verify."
+  if [ -s "$DATE_STATE" ]; then
+    ok "Done! OS Age is now $(age_from "$(cat "$DATE_STATE")"). Run 'fastfetch' to verify."
+  else
+    ok "Done! Configs restored. (OS Age was unknown — see warning above.)"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -399,7 +458,11 @@ cmd_status() {
 
   local date
   date="$(resolve_install_date)"
-  echo "OS Age:      $(age_from "$date")  (installed $(date -d @"$date" '+%Y-%m-%d' 2>/dev/null || date -r "$date" '+%Y-%m-%d'))"
+  if [ -n "$date" ] && [ "$date" != "0" ]; then
+    echo "OS Age:      $(age_from "$date")  (installed $(date -d @"$date" '+%Y-%m-%d' 2>/dev/null || date -r "$date" '+%Y-%m-%d'))"
+  else
+    echo "OS Age:      unknown (no stored install date)"
+  fi
   echo
 
   echo "Configs:"
@@ -438,13 +501,13 @@ cmd_update() {
   done
   local root; root="$(cd -P "$(dirname "$self")" && pwd)"
 
-  if [ -d "$root/.git" ]; then
-    info "Updating $root"
-    git -C "$root" pull --ff-only
-    ok "Updated to the latest version"
-  else
-    die "No git repo found at $root. Re-run the one-command installer to update."
+  if ! [ -d "$root/.git" ]; then
+    die "No git repo found at $root. Run 'archkde-restore deps' to convert it, or re-run the one-command installer."
   fi
+
+  info "Updating $root"
+  git -C "$root" pull --ff-only
+  ok "Updated to the latest version"
 }
 
 # ---------------------------------------------------------------------------

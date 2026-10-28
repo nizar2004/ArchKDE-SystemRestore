@@ -23,12 +23,15 @@ curl -fsSL https://raw.githubusercontent.com/nizar2004/ArchKDE-SystemRestore/mai
 
 Designed for a **fresh Arch reinstall**. It:
 
-1. Installs every required package — `fastfetch`, `ghostty`, `fish`, `git`, `curl`
-   (and `oh-my-posh` from its official release binary, since it's not in the repos)
-2. Sets **fish** as the default shell, so fastfetch + oh-my-posh run on terminal open
-3. Downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
+1. Installs every required package — `fastfetch`, `ghostty`, `fish`, `git`, `curl`,
+   `ttf-meslo-nerd` (the font the Ghostty config uses; `oh-my-posh` is pulled from
+   its official release binary, since it's not in the repos)
+2. If the copy was downloaded as a tarball (no `git` on the live ISO yet), converts
+   it into a real git clone once `git` is installed — so `backup` can push to GitHub
+3. Sets **fish** as the default shell, so fastfetch + oh-my-posh run on terminal open
+4. Downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
    `archkde-restore` command keeps working), installs the command onto your `PATH`
-4. Runs an initial restore
+5. Runs an initial restore
 
 Prefer to clone manually? That works too:
 
