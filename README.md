@@ -49,6 +49,26 @@ After that, just use the command directly. To update later: `archkde-restore upd
 
 ## Usage
 
+Run it with **no arguments** and a styled interactive menu opens — the two
+commands that matter:
+
+```bash
+archkde-restore
+
+#   ╭───────────────────────────────────────╮
+#   │ ⚡ ArchKDE-SystemRestore  v1.1.0       │
+#   ╰───────────────────────────────────────╯
+#
+#   What do you want to do?
+#
+#     1)  Backup    — save the current setup & push it to GitHub
+#     2)  Restore   — put everything back on this machine
+#
+#   ↳ press a key:
+```
+
+Both also work directly from the shell:
+
 ```bash
 archkde-restore backup              # back up + push to GitHub
 archkde-restore backup --label "before tweak"
@@ -56,8 +76,15 @@ archkde-restore backup --no-push    # back up locally only
 archkde-restore restore             # restore all configs + OS age
 archkde-restore restore --from latest
 archkde-restore restore --from ~/.local/state/ArchKDE-SystemRestore/backups/20261021-010444
+```
+
+Advanced commands (kept for the installer/maintenance, not in the menu):
+
+```bash
 archkde-restore update              # pull the latest version of the installed copy
 archkde-restore status              # show OS age, backups, and config status
+archkde-restore install             # install the command onto your PATH
+archkde-restore deps                # install required packages (fresh Arch)
 ```
 
 ## Backups go to GitHub
