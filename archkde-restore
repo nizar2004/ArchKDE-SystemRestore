@@ -363,7 +363,8 @@ backup_push() {
     warn "Proceeding without a configured git identity — the commit below may fail"
   fi
 
-  if ! git -C "$REPO_DIR" add -A backups os-install-date 2>/dev/null; then
+  if ! git -C "$REPO_DIR" add -A backups os-install-date 2>/dev/null \
+     && ! git -C "$REPO_DIR" add -A 2>/dev/null; then
     warn "Could not stage backup files"
     return 1
   fi
@@ -377,16 +378,36 @@ backup_push() {
   local msg="backup: $(date +%Y%m%d-%H%M%S)"
   [ -n "$label" ] && msg="$msg ($label)"
 
-  if git -C "$REPO_DIR" commit -m "$msg" >/dev/null 2>&1; then
-    if git -C "$REPO_DIR" push origin HEAD >/dev/null 2>&1; then
-      ok "Pushed to GitHub — restorable on any machine"
-    else
-      warn "Push failed (offline or auth?). Backup is saved locally."
-      echo "        Push it later with: git -C $REPO_DIR push"
-    fi
-  else
+  if ! git -C "$REPO_DIR" commit -m "$msg" >/dev/null 2>&1; then
     warn "Commit failed — is the repo in a clean state?"
+    return 1
   fi
+
+  # Push. If the remote has commits this copy doesn't have yet (e.g. the
+  # installed copy missed a recent update, or a backup was pushed from
+  # another copy), rebase our backup commit onto them and try again.
+  local attempt err
+  for attempt in 1 2; do
+    if err="$(git -C "$REPO_DIR" push origin HEAD 2>&1)"; then
+      ok "Pushed to GitHub — restorable on any machine"
+      return 0
+    fi
+    if echo "$err" | grep -qiE 'behind|fast-forward|fetch first|non-fast-forward'; then
+      info "Remote has newer commits — rebasing our backup commit onto them"
+      if git -C "$REPO_DIR" fetch -q origin main \
+         && git -C "$REPO_DIR" rebase -q origin/main 2>/dev/null; then
+        continue
+      fi
+      warn "Could not rebase onto origin/main — resolve manually first:"
+      echo "        git -C $REPO_DIR pull --rebase"
+      break
+    fi
+    break
+  done
+
+  warn "Push failed. Backup is saved locally. Reason:"
+  echo "$err" | tail -3 | sed 's/^/        /'
+  echo "        Push it later with: git -C $REPO_DIR push"
 }
 
 # ---------------------------------------------------------------------------
