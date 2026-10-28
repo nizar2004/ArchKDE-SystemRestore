@@ -68,6 +68,7 @@ die()  { err "$*"; exit 1; }
 
 as_root() {
   if [ "$(id -u)" -eq 0 ]; then "$@"
+  elif command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then sudo "$@"
   elif [ -t 0 ] && command -v sudo >/dev/null 2>&1; then sudo "$@"
   elif command -v pkexec >/dev/null 2>&1; then pkexec "$@"
   elif command -v sudo >/dev/null 2>&1; then sudo "$@"
@@ -132,29 +133,71 @@ ensure_git_repo() {
 cmd_deps() {
   info "Installing required packages"
 
-  # --- pacman packages (fastfetch, ghostty, fish, git, curl) ---
-  local missing=() p
+  command -v pacman >/dev/null 2>&1 \
+    || die "pacman not found — this tool targets Arch Linux / CachyOS."
+
+  # --- evaluate what is missing (needs no root) ---
+  local missing=() p need_omp=false need_chsh=false
   for p in "${PACMAN_PKGS[@]}"; do
     pacman -Qq "$p" >/dev/null 2>&1 || missing+=("$p")
   done
+  command -v oh-my-posh >/dev/null 2>&1 || need_omp=true
+  local cur_shell
+  cur_shell="$(getent passwd "$(id -un)" | cut -d: -f7 || true)"
+  [ "$cur_shell" = "/usr/bin/fish" ] || need_chsh=true
 
-  if [ ${#missing[@]} -gt 0 ]; then
-    info "Installing from pacman: ${missing[*]}"
-    as_root pacman -Sy --needed --noconfirm "${missing[@]}"
-    ok "pacman packages installed"
-  else
-    ok "All pacman packages already installed"
+  # --- do all privileged work in ONE root step ---
+  # (installs packages, oh-my-posh, registers fish in /etc/shells, chsh).
+  # One password prompt under pkexec; sudo credentials are already cached
+  # by install.sh's upfront prompt.
+  if [ ${#missing[@]} -gt 0 ] || $need_omp || $need_chsh; then
+    [ ${#missing[@]} -gt 0 ] && info "Installing from pacman: ${missing[*]}"
+    $need_omp && info "oh-my-posh will be installed from GitHub releases"
+    $need_chsh && info "fish will be set as the login shell"
+
+    local root_script; root_script="$(mktemp)"
+    echo 'set -euo pipefail' > "$root_script"
+    if [ ${#missing[@]} -gt 0 ]; then
+      printf 'pacman -Sy --needed --noconfirm %s\n' "${missing[*]}" >> "$root_script"
+    fi
+    if $need_omp; then
+      {
+        echo 'mkdir -p /usr/local/bin'
+        printf 'curl -fsSL %q -o /usr/local/bin/oh-my-posh\n' "$OMP_BIN_URL"
+        echo 'chmod +x /usr/local/bin/oh-my-posh'
+      } >> "$root_script"
+    fi
+    if $need_chsh; then
+      cat >> "$root_script" <<'EOS'
+grep -qxF /usr/bin/fish /etc/shells 2>/dev/null || echo /usr/bin/fish >> /etc/shells
+[ -x /usr/bin/fish ] && chsh -s /usr/bin/fish "$(id -un)" || true
+EOS
+    fi
+    as_root bash "$root_script"
+    rm -f "$root_script"
   fi
 
-  # --- oh-my-posh (not in the official repos — install the official binary) ---
-  if command -v oh-my-posh >/dev/null 2>&1; then
-    ok "oh-my-posh already installed ($(oh-my-posh --version 2>/dev/null | head -1))"
+  # --- verify what actually happened ---
+  local still_missing=()
+  for p in "${PACMAN_PKGS[@]}"; do
+    pacman -Qq "$p" >/dev/null 2>&1 || still_missing+=("$p")
+  done
+  if [ ${#still_missing[@]} -gt 0 ]; then
+    warn "Not installed: ${still_missing[*]} — check pacman output above"
   else
-    info "Installing oh-my-posh from GitHub releases"
-    as_root mkdir -p /usr/local/bin
-    as_root curl -fsSL "$OMP_BIN_URL" -o /usr/local/bin/oh-my-posh
-    as_root chmod +x /usr/local/bin/oh-my-posh
-    ok "oh-my-posh installed: $(oh-my-posh --version 2>/dev/null | head -1)"
+    ok "All pacman packages present (${PACMAN_PKGS[*]})"
+  fi
+  if command -v oh-my-posh >/dev/null 2>&1; then
+    ok "oh-my-posh ready: $(oh-my-posh --version 2>/dev/null | head -1)"
+  else
+    warn "oh-my-posh not available on PATH"
+  fi
+  cur_shell="$(getent passwd "$(id -un)" | cut -d: -f7 || true)"
+  if [ "$cur_shell" = "/usr/bin/fish" ]; then
+    ok "fish is the login shell (takes effect after log out/in)"
+  else
+    warn "Login shell is still $cur_shell — log out and back in to switch to fish"
+    warn "(Ghostty is configured to start fish directly, so new windows work right away)"
   fi
 
   # --- turn a tarball install into a real git clone so backup pushes work ---
@@ -166,19 +209,6 @@ cmd_deps() {
       warn "Could not convert to a git clone (missing git or offline)"
       warn "Backups will still save locally. Re-run 'archkde-restore deps' once online."
     fi
-  fi
-
-  # --- make fish the default shell so fastfetch + oh-my-posh run on terminal open ---
-  local cur_shell
-  cur_shell="$(getent passwd "$(id -un)" | cut -d: -f7 || true)"
-  if [ "$cur_shell" = "/usr/bin/fish" ]; then
-    ok "fish is already the default shell"
-  elif [ -x /usr/bin/fish ]; then
-    info "Setting fish as the default shell"
-    as_root chsh -s /usr/bin/fish "$(id -un)"
-    ok "Default shell is now fish (fastfetch + oh-my-posh will run on terminal open)"
-  else
-    warn "/usr/bin/fish not found — install fish first"
   fi
 }
 

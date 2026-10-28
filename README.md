@@ -28,10 +28,14 @@ Designed for a **fresh Arch reinstall**. It:
    its official release binary, since it's not in the repos)
 2. If the copy was downloaded as a tarball (no `git` on the live ISO yet), converts
    it into a real git clone once `git` is installed — so `backup` can push to GitHub
-3. Sets **fish** as the default shell, so fastfetch + oh-my-posh run on terminal open
-4. Downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
+3. Asks for the **sudo password once, up front**, then does all privileged work
+   (packages, oh-my-posh, default shell) in a single root step
+4. Sets **fish** as the default shell — and the Ghostty config starts fish directly,
+   so fastfetch + oh-my-posh appear in new windows immediately (the login-shell
+   change itself needs a log out/in)
+5. Downloads the project to `~/.local/share/ArchKDE-SystemRestore` (persistent, so the
    `archkde-restore` command keeps working), installs the command onto your `PATH`
-5. Runs an initial restore
+6. Runs an initial restore
 
 Prefer to clone manually? That works too:
 

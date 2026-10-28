@@ -36,3 +36,7 @@ font-size = 11
 
 window-padding-x = 8
 window-padding-y = 8
+
+# Start fish directly so fastfetch + oh-my-posh run in every new window, even
+# before the `chsh` login-shell change takes effect (which needs a re-login).
+command = /usr/bin/fish
