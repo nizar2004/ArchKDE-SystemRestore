@@ -10,6 +10,7 @@ configs in sync and makes my fastfetch **"OS Age"** survive a full reinstall.
 | fastfetch | `configs/fastfetch-config.jsonc` | `~/.config/fastfetch/config.jsonc` |
 | Ghostty | `configs/ghostty-config` | `~/.config/ghostty/config` |
 | fish | `configs/fish-config.fish` | `~/.config/fish/config.fish` |
+| fish functions | `configs/fish-functions/*.fish` | `~/.config/fish/functions/` |
 | oh-my-posh | `configs/oh-my-posh/*.omp.json` | `~/.config/oh-my-posh/` |
 | OS age | `os-install-date` | `~/.local/state/ArchKDE-SystemRestore/os-install-date` |
 
@@ -24,8 +25,9 @@ curl -fsSL https://raw.githubusercontent.com/nizar2004/ArchKDE-SystemRestore/mai
 Designed for a **fresh Arch reinstall**. It:
 
 1. Installs every required package — `fastfetch`, `ghostty`, `fish`, `git`, `curl`,
-   `ttf-meslo-nerd` (the font the Ghostty config uses; `oh-my-posh` is pulled from
-   its official release binary, since it's not in the repos)
+   `fzf`, `ttf-meslo-nerd` (the font the Ghostty config uses; `oh-my-posh` is pulled from
+   its official release binary, since it's not in the repos) — and builds **yay** from
+   the AUR, so the `yaysrch` fuzzy package-searcher works out of the box
 2. If the copy was downloaded as a tarball (no `git` on the live ISO yet), converts
    it into a real git clone once `git` is installed — so `backup` can push to GitHub
 3. Asks for the **sudo password once, up front**, then does all privileged work

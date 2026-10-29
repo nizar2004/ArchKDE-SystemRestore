@@ -50,8 +50,9 @@ BACKUP_DIR="$REPO_DIR/backups"
 
 # Everything needed on a fresh Arch install for this project to work.
 # (ttf-meslo-nerd provides MesloLGS Nerd Font Mono, used by the Ghostty config.)
-PACMAN_PKGS=(fastfetch ghostty fish git curl ttf-meslo-nerd)
+PACMAN_PKGS=(fastfetch ghostty fish git curl fzf ttf-meslo-nerd)
 OMP_BIN_URL="https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64"
+YAY_AUR_URL="https://aur.archlinux.org/yay.git"
 GITHUB_REPO="https://github.com/nizar2004/ArchKDE-SystemRestore.git"
 
 # Target config locations
@@ -178,6 +179,26 @@ EOS
     fi
     as_root bash "$root_script"
     rm -f "$root_script"
+  fi
+
+  # --- yay (AUR helper) so the yaysrch command works on a fresh install ---
+  if command -v yay >/dev/null 2>&1; then
+    ok "yay already installed ($(yay --version 2>/dev/null | head -1))"
+  else
+    info "Installing yay (AUR helper) - building from source"
+    # makepkg refuses to run as root: build deps first (one cached-sudo call),
+    # then build as your user, then install the built package with root.
+    as_root pacman -Sy --needed --noconfirm --asdeps base-devel go
+    local bd; bd="$(mktemp -d)"
+    git clone --depth 1 "$YAY_AUR_URL" "$bd/yay"
+    if ( cd "$bd/yay" && makepkg -sf --noconfirm ) && compgen -G "$bd/yay/yay-*.pkg.tar.zst" >/dev/null; then
+      as_root pacman -U --noconfirm "$bd"/yay/yay-*.pkg.tar.zst
+      ok "yay installed: $(yay --version 2>/dev/null | head -1)"
+    else
+      warn "yay build failed - the yaysrch command needs it"
+      warn "Install it manually later: git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si"
+    fi
+    rm -rf "$bd"
   fi
 
   # --- verify what actually happened ---
@@ -464,6 +485,16 @@ cmd_restore() {
     ok "fish -> $FISH_CFG"
   else
     warn "fish config not found in repo"
+  fi
+
+  # --- fish custom functions (yaysrch etc.) ---
+  if [ -d "$CONFIG_SRC/fish-functions" ] && ls "$CONFIG_SRC/fish-functions"/*.fish >/dev/null 2>&1; then
+    mkdir -p "$HOME/.config/fish/functions"
+    local nfn; nfn=$(ls -1 "$CONFIG_SRC/fish-functions"/*.fish | wc -l)
+    cp -f "$CONFIG_SRC/fish-functions"/*.fish "$HOME/.config/fish/functions/"
+    ok "fish functions -> $HOME/.config/fish/functions ($nfn function(s))"
+  else
+    warn "no fish functions found in repo"
   fi
 
   # --- oh-my-posh ---

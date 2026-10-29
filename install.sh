@@ -16,9 +16,9 @@ CLI="$REPO_DIR/archkde-restore"
 
 # --- styling (auto-disabled when output isn't a real terminal) ---
 if [ -t 1 ]; then
-  C=$'\033[1;34m' G=$'\033[1;32m' W=$'\033[1;37m' D=$'\033[0;90m' R=$'\033[0m'
+  C=$'\033[1;34m' G=$'\033[1;32m' Y=$'\033[1;33m' W=$'\033[1;37m' D=$'\033[0;90m' R=$'\033[0m'
 else
-  C='' G='' W='' D='' R=''
+  C='' G='' Y='' W='' D='' R=''
 fi
 
 # Box helpers — content padded to exactly 42 ASCII columns so the right
@@ -28,6 +28,9 @@ box_top() { printf '  %b\u256d%s\u256e%b\n' "$C" "$MENU_H" "$R"; }
 box_row() { printf '  %b\u2502%b %b%-42s%b %b\u2502%b\n' "$C" "$R" "$1" "$2" "$R" "$C" "$R"; }
 box_bot() { printf '  %b\u2570%s\u256f%b\n' "$C" "$MENU_H" "$R"; }
 step()    { printf '\n  %b%s%b  %b%s%b\n' "$D" "$1" "$R" "$W" "$2" "$R"; }
+info()    { printf '%s\n' "${C}==>${R} $*"; }
+ok()      { printf '%b\n' "${G} \u2713 ${R}$*"; }
+warn()    { printf '%s\n' "${Y} ! ${R} $*"; }
 
 banner() {
   printf '\n'
@@ -54,14 +57,32 @@ summary() {
 
 banner
 
-step "1/4" "Packages"
+step "1/5" "Access"
+if [ "$(id -u)" -eq 0 ]; then
+  ok "Running as root - no password needed"
+elif sudo -n true 2>/dev/null; then
+  ok "sudo credentials already cached"
+else
+  info "Asking for the sudo password once - everything after this runs without prompting"
+  if sudo -v; then
+    ok "sudo ready"
+    # Keep the cached credentials alive for the whole install (pacman builds can be slow).
+    ( while sleep 50; do sudo -n true 2>/dev/null || exit; done ) &
+    SUDO_KEEPALIVE_PID=$!
+    trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
+  else
+    warn "Could not cache sudo credentials here - per-step prompts or polkit will ask instead"
+  fi
+fi
+
+step "2/5" "Packages"
 "$CLI" deps
 
-step "2/4" "Command"
+step "3/5" "Command"
 "$CLI" install "$@"
 
-step "3/4" "Configs"
+step "4/5" "Configs"
 "$CLI" restore
 
-step "4/4" "Done"
+step "5/5" "Done"
 summary
