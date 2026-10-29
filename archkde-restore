@@ -257,7 +257,7 @@ cmd_install() {
   fi
 
   echo
-  echo "Usage: $PROG {backup|restore|status|help}"
+  echo "Usage: $PROG (menu) · backup · restore · status"
 }
 
 # ---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ cmd_restore() {
       die "No os-install-date in backup: $from"
     fi
   else
-    resolve_install_date
+    resolve_install_date >/dev/null
     if [ -s "$DATE_STATE" ]; then
       ok "OS install date persisted"
     else
