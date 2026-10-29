@@ -16,14 +16,21 @@ DEST="${XDG_DATA_HOME:-$HOME/.local/share}/ArchKDE-SystemRestore"
 GIT_URL="https://github.com/$REPO.git"
 ARCHIVE="https://github.com/$REPO/archive/refs/heads/main.tar.gz"
 
-info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-ok()   { printf '\033[1;32m ✓ \033[0m %s\n' "$*"; }
+# --- styling (auto-disabled when output isn't a real terminal) ---
+if [ -t 1 ]; then
+  C=$'\033[1;34m' G=$'\033[1;32m' D=$'\033[0;90m' R=$'\033[0m'
+else
+  C='' G='' D='' R=''
+fi
+info() { printf '%s\n' "${C}==>${R} $*"; }
+ok()   { printf '%b\n' "${G} \u2713 ${R}$*"; }
 
 for bin in curl tar; do
   command -v "$bin" >/dev/null 2>&1 || { echo "error: '$bin' is required" >&2; exit 1; }
 done
 
-info "Installing ArchKDE-SystemRestore to $DEST"
+info "Fetching ArchKDE-SystemRestore from GitHub"
+info "Target: $DEST"
 
 if command -v git >/dev/null 2>&1; then
   if [ -d "$DEST/.git" ]; then

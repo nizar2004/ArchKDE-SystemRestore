@@ -52,19 +52,21 @@ After that, just use the command directly. To update later: `archkde-restore upd
 Run it with **no arguments** and a styled interactive menu opens — the two
 commands that matter:
 
-```bash
-archkde-restore
+```text
+  ╭────────────────────────────────────────────╮
+  │ ARCHKDE-SYSTEMRESTORE - v1.2.0             │
+  │ my Arch/KDE setup, in one command          │
+  ╰────────────────────────────────────────────╯
 
-#   ╭───────────────────────────────────────╮
-#   │ ⚡ ArchKDE-SystemRestore  v1.1.0       │
-#   ╰───────────────────────────────────────╯
-#
-#   What do you want to do?
-#
-#     1)  Backup    — save the current setup & push it to GitHub
-#     2)  Restore   — put everything back on this machine
-#
-#   ↳ press a key:
+   What do you want to do?
+
+     1)  Backup    save the current setup & push it to GitHub
+
+     2)  Restore   put everything back on this machine
+
+     q)  Quit
+
+   >> press a key:
 ```
 
 Both also work directly from the shell:
